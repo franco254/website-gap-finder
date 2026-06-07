@@ -113,7 +113,7 @@
   <div class="logo">🔍</div>
   <div>
     <h1>Website Gap Finder</h1>
-    <p>Find local businesses with no website · Powered by SerpApi</p>
+    <p>Find local businesses with no website · Powered by SerpApi + Vercel</p>
   </div>
 </header>
 
@@ -350,6 +350,8 @@
         <div class="biz-actions">
           <a href="${mapsLink}" target="_blank">Maps ↗</a>
           ${b.website?`<a href="${escHtml(b.website)}" target="_blank">Site ↗</a>`:''}
+          ${b.phone?`<a href="https://wa.me/${b.phone.replace(/[^0-9]/g,'').replace(/^0/,'971')}" target="_blank">WhatsApp ↗</a>`:''}
+          ${b.phone?`<a href="mailto:?body=Hi, I found your business ${encodeURIComponent(b.title)} on Google Maps." target="_blank">Email ↗</a>`:''}
         </div>
       </div>`;
     });
@@ -361,23 +363,9 @@
     return (data.local_results||[]).map(r=>({title:r.title,website:r.website||null,rating:r.rating,reviews:r.reviews,type:r.type,address:r.address,phone:r.phone,place_id:r.place_id}));
   }
 
-  const SERPAPI_KEY = '13fd83f711f435486c8eeed548d3d06e77eba667bff3c6824e550e8a9f6085c7';
-
   async function callApi(params) {
-    let url;
-    if (params.next) {
-      url = decodeURIComponent(params.next) + '&api_key=' + SERPAPI_KEY;
-    } else {
-      const p = new URLSearchParams({
-        engine: 'google_maps',
-        type: 'search',
-        q: params.q,
-        ll: params.ll,
-        gl: params.gl,
-        api_key: SERPAPI_KEY,
-      });
-      url = 'https://serpapi.com/search.json?' + p;
-    }
+    // Calls OUR Vercel serverless function — no CORS issues
+    const url = '/api/search?' + new URLSearchParams(params);
     const res = await fetch(url);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
