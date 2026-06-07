@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Website Gap Finder</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0e0e0f; --surface: #18181b; --border: #2a2a2f;
+    --accent: #d4ff00; --accent2: #ff6b35; --text: #f0f0f0;
+    --muted: #6b6b72; --danger: #ff4444; --success: #44ff88;
+  }
+  body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  header { padding: 1.5rem 2rem 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: flex-end; gap: 1.2rem; }
+  .logo { width: 44px; height: 44px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
+  header h1 { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
+  header p { font-size: 0.72rem; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 0.3rem; }
+
+  .main { max-width: 900px; margin: 0 auto; padding: 1.5rem 2rem; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.4rem; margin-bottom: 1.2rem; }
+  .card-label { font-size: 0.68rem; font-family: 'DM Mono', monospace; color: var(--accent); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 1rem; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-bottom: 0.9rem; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.9rem; margin-bottom: 0.9rem; }
+  .span2 { grid-column: 1 / -1; }
+
+  .field { display: flex; flex-direction: column; gap: 0.35rem; }
+  .field label { font-size: 0.68rem; color: var(--muted); font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: 0.06em; }
+  .field input, .field select { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.85rem; color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.82rem; outline: none; transition: border-color 0.2s; width: 100%; }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .field select option { background: var(--bg); }
+
+  .loc-toggle { display: flex; gap: 0.4rem; margin-bottom: 0.85rem; }
+  .loc-btn { padding: 0.38rem 0.85rem; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 0.7rem; cursor: pointer; transition: all 0.15s; }
+  .loc-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+  .loc-btn:not(.active):hover { border-color: var(--muted); color: var(--text); }
+  .loc-panel { display: none; }
+  .loc-panel.visible { display: block; }
+
+  .btn-row { display: flex; gap: 0.7rem; flex-wrap: wrap; align-items: center; margin-top: 0.9rem; }
+  .btn { padding: 0.6rem 1.2rem; border-radius: 8px; border: none; cursor: pointer; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.83rem; transition: all 0.15s; display: flex; align-items: center; gap: 0.45rem; }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+  .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); font-size: 0.75rem; }
+  .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+  .btn-sm { padding: 0.42rem 0.8rem; font-size: 0.75rem; }
+
+  .note { background: rgba(212,255,0,0.05); border: 1px solid rgba(212,255,0,0.15); border-radius: 8px; padding: 0.7rem 1rem; font-size: 0.7rem; color: rgba(212,255,0,0.65); font-family: 'DM Mono', monospace; margin-top: 0.75rem; line-height: 1.65; }
+
+  .status-bar { display: flex; align-items: center; gap: 0.9rem; padding: 0.85rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 1.2rem; font-family: 'DM Mono', monospace; font-size: 0.76rem; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dot.green { background: var(--success); box-shadow: 0 0 8px var(--success); }
+  .dot.yellow { background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: blink 1.2s infinite; }
+  .dot.red { background: var(--danger); }
+  .dot.grey { background: var(--muted); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 0.9rem; margin-bottom: 1.2rem; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem 1.1rem; }
+  .stat .val { font-size: 1.9rem; font-weight: 800; line-height: 1; color: var(--accent); }
+  .stat.orange .val { color: var(--accent2); }
+  .stat.green .val { color: var(--success); }
+  .stat.purple .val { color: #c084fc; }
+  .stat .lbl { font-size: 0.66rem; color: var(--muted); font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 0.25rem; }
+
+  .results-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; flex-wrap: wrap; gap: 0.7rem; }
+  .results-header h3 { font-size: 0.68rem; font-family: 'DM Mono', monospace; color: var(--accent); text-transform: uppercase; letter-spacing: 0.12em; }
+  .tabs { display: flex; gap: 0.35rem; }
+  .tab { padding: 0.3rem 0.75rem; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 0.68rem; cursor: pointer; transition: all 0.15s; }
+  .tab.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+  .tab:not(.active):hover { border-color: var(--muted); color: var(--text); }
+
+  .biz-list { display: flex; flex-direction: column; gap: 0.55rem; }
+  .biz-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.95rem 1.1rem 0.95rem 1.4rem; position: relative; overflow: hidden; display: grid; grid-template-columns: 1fr auto; gap: 0.5rem 1rem; align-items: start; transition: border-color 0.18s; }
+  .biz-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background: var(--success); }
+  .biz-card.no-web::before { background: var(--accent2); }
+  .biz-card:hover { border-color: #444; }
+  .biz-name { font-weight: 700; font-size: 0.92rem; line-height: 1.2; }
+  .biz-meta { display: flex; flex-wrap: wrap; gap: 0.35rem 0.75rem; margin-top: 0.35rem; align-items: center; }
+  .biz-meta span { font-size: 0.69rem; font-family: 'DM Mono', monospace; color: var(--muted); }
+  .badge { padding: 0.18rem 0.55rem; border-radius: 4px; font-size: 0.64rem; font-family: 'DM Mono', monospace; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+  .badge.nw { background: rgba(255,107,53,0.15); color: var(--accent2); border: 1px solid rgba(255,107,53,0.3); }
+  .badge.hw { background: rgba(68,255,136,0.1); color: var(--success); border: 1px solid rgba(68,255,136,0.2); }
+  .biz-actions { display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-end; flex-shrink: 0; }
+  .biz-actions a { font-size: 0.67rem; font-family: 'DM Mono', monospace; color: var(--muted); text-decoration: none; padding: 0.22rem 0.55rem; border: 1px solid var(--border); border-radius: 5px; transition: all 0.15s; white-space: nowrap; }
+  .biz-actions a:hover { color: var(--accent); border-color: var(--accent); }
+  .stars { color: #fbbf24; }
+
+  .error-box { background: rgba(255,68,68,0.08); border: 1px solid rgba(255,68,68,0.3); border-radius: 10px; padding: 0.9rem 1.1rem; color: #ff9999; font-family: 'DM Mono', monospace; font-size: 0.76rem; margin-bottom: 1rem; line-height: 1.6; }
+  .empty { text-align: center; padding: 3.5rem 2rem; color: var(--muted); }
+  .empty .ico { font-size: 2.2rem; margin-bottom: 0.8rem; }
+  .empty p { font-family: 'DM Mono', monospace; font-size: 0.78rem; }
+  .load-more-row { text-align: center; padding: 1rem 0; }
+  .coord-hint { font-size: 0.65rem; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 0.3rem; }
+
+  @media(max-width:600px){
+    .grid-2,.grid-3{grid-template-columns:1fr;}
+    .stats-row{grid-template-columns:repeat(2,1fr);}
+    .biz-card{grid-template-columns:1fr;}
+    .biz-actions{flex-direction:row;}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">🔍</div>
+  <div>
+    <h1>Website Gap Finder</h1>
+    <p>Find local businesses with no website · Powered by SerpApi</p>
+  </div>
+</header>
+
+<div class="main">
+  <div class="card">
+    <div class="card-label">// Search</div>
+
+    <!-- Location toggle -->
+    <div class="field" style="margin-bottom:0.5rem"><label>Location Method</label></div>
+    <div class="loc-toggle">
+      <button class="loc-btn active" id="btnGps" onclick="setLocMode('gps')">📍 Auto GPS</button>
+      <button class="loc-btn" id="btnCity" onclick="setLocMode('city')">🏙 City Name</button>
+      <button class="loc-btn" id="btnCoord" onclick="setLocMode('coord')">🗺 Coordinates</button>
+    </div>
+
+    <div class="loc-panel visible" id="panelGps">
+      <div class="note" style="margin-top:0;margin-bottom:0.85rem">📍 Browser will prompt for location access. If it fails, use City Name mode.</div>
+    </div>
+    <div class="loc-panel" id="panelCity">
+      <div class="grid-2" style="margin-bottom:0.3rem">
+        <div class="field">
+          <label>City / Area</label>
+          <input type="text" id="cityInput" placeholder="e.g. Umm al Quwain, Dubai Marina…"/>
+        </div>
+        <div class="field" style="align-self:end">
+          <button class="btn btn-outline btn-sm" onclick="geocodeCity()" style="width:100%">🔎 Find Coordinates</button>
+        </div>
+      </div>
+      <div id="geocodeResult" class="coord-hint"></div>
+    </div>
+    <div class="loc-panel" id="panelCoord">
+      <div class="grid-2" style="margin-bottom:0.3rem">
+        <div class="field"><label>Latitude</label><input type="number" id="manLat" placeholder="25.5145" step="any"/></div>
+        <div class="field"><label>Longitude</label><input type="number" id="manLng" placeholder="55.7183" step="any"/></div>
+      </div>
+      <div class="coord-hint">UAE examples — Dubai: 25.2048, 55.2708 · Abu Dhabi: 24.4539, 54.3773 · UAQ: 25.5145, 55.7183</div>
+    </div>
+
+    <div class="grid-3" style="margin-top:0.85rem">
+      <div class="field">
+        <label>Business Type</label>
+        <select id="bizType">
+          <option value="restaurants">Restaurants</option>
+          <option value="hair salon">Hair Salon</option>
+          <option value="barbershop">Barbershop</option>
+          <option value="gym">Gym / Fitness</option>
+          <option value="hardware store">Hardware Store</option>
+          <option value="pharmacy">Pharmacy</option>
+          <option value="laundry">Laundry</option>
+          <option value="car repair">Auto Repair</option>
+          <option value="clothing store">Clothing Store</option>
+          <option value="supermarket">Supermarket</option>
+          <option value="bakery">Bakery</option>
+          <option value="hotel">Hotel</option>
+          <option value="electrician">Electrician</option>
+          <option value="plumber">Plumber</option>
+          <option value="real estate">Real Estate</option>
+          <option value="accountant">Accountant</option>
+          <option value="lawyer">Lawyer</option>
+          <option value="dentist">Dentist</option>
+          <option value="clinic">Clinic / Doctor</option>
+          <option value="printing shop">Printing Shop</option>
+          <option value="travel agency">Travel Agency</option>
+          <option value="cleaning service">Cleaning Service</option>
+          <option value="tailoring">Tailoring</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Country</label>
+        <select id="country">
+          <optgroup label="Middle East">
+            <option value="ae">🇦🇪 UAE</option>
+            <option value="sa">🇸🇦 Saudi Arabia</option>
+            <option value="qa">🇶🇦 Qatar</option>
+            <option value="kw">🇰🇼 Kuwait</option>
+            <option value="bh">🇧🇭 Bahrain</option>
+            <option value="om">🇴🇲 Oman</option>
+            <option value="eg">🇪🇬 Egypt</option>
+          </optgroup>
+          <optgroup label="Africa">
+            <option value="ke">🇰🇪 Kenya</option>
+            <option value="ng">🇳🇬 Nigeria</option>
+            <option value="gh">🇬🇭 Ghana</option>
+            <option value="tz">🇹🇿 Tanzania</option>
+            <option value="ug">🇺🇬 Uganda</option>
+            <option value="za">🇿🇦 South Africa</option>
+          </optgroup>
+          <optgroup label="Other">
+            <option value="us">🇺🇸 United States</option>
+            <option value="gb">🇬🇧 United Kingdom</option>
+            <option value="in">🇮🇳 India</option>
+            <option value="au">🇦🇺 Australia</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="field">
+        <label>Radius</label>
+        <select id="zoom">
+          <option value="15">15z — Block (~500m)</option>
+          <option value="14">14z — Street (~1km)</option>
+          <option value="13" selected>13z — ~2km</option>
+          <option value="12">12z — ~5km</option>
+          <option value="11">11z — ~10km</option>
+          <option value="10">10z — ~20km</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="searchBtn" onclick="startSearch()">
+        <span id="searchIcon">🔍</span> <span id="searchLabel">Search Now</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="errorBox" class="error-box" style="display:none"></div>
+  <div id="statusBar" class="status-bar" style="display:none">
+    <div class="dot grey" id="dot"></div>
+    <span id="statusText"></span>
+  </div>
+
+  <div class="stats-row" id="statsRow" style="display:none">
+    <div class="stat"><div class="val" id="sTotal">0</div><div class="lbl">Total Found</div></div>
+    <div class="stat orange"><div class="val" id="sNoWeb">0</div><div class="lbl">No Website 🎯</div></div>
+    <div class="stat green"><div class="val" id="sHasWeb">0</div><div class="lbl">Has Website</div></div>
+    <div class="stat purple"><div class="val" id="sPage">1</div><div class="lbl">Page</div></div>
+  </div>
+
+  <div id="resultsSection" style="display:none">
+    <div class="results-header">
+      <h3>// Results</h3>
+      <div style="display:flex;gap:0.5rem;align-items:center">
+        <div class="tabs">
+          <button class="tab active" id="tab-all" onclick="setFilter('all')">All</button>
+          <button class="tab" id="tab-no" onclick="setFilter('no')">No Website</button>
+          <button class="tab" id="tab-yes" onclick="setFilter('yes')">Has Website</button>
+        </div>
+        <button class="btn btn-ghost" onclick="exportCSV()">⬇ CSV</button>
+      </div>
+    </div>
+    <div class="biz-list" id="bizList"></div>
+    <div class="load-more-row" id="loadMoreRow" style="display:none">
+      <button class="btn btn-outline" onclick="loadMore()">Load Next Page</button>
+    </div>
+  </div>
+
+  <div class="empty" id="emptyState" style="display:none">
+    <div class="ico">🏙️</div>
+    <p>No results found. Try a wider radius or different business type.</p>
+  </div>
+</div>
+
+<script>
+  let allResults = [], currentFilter = 'all', serpNextUrl = null, currentPage = 1;
+  let locMode = 'gps', resolvedLat = null, resolvedLng = null;
+
+  function setLocMode(m) {
+    locMode = m;
+    ['gps','city','coord'].forEach(x => {
+      const cap = x.charAt(0).toUpperCase()+x.slice(1);
+      document.getElementById('btn'+cap).classList.toggle('active', x===m);
+      document.getElementById('panel'+cap).classList.toggle('visible', x===m);
+    });
+    document.getElementById('searchLabel').textContent = m==='gps' ? 'Use My Location & Search' : 'Search Now';
+    document.getElementById('searchIcon').textContent = m==='gps' ? '📍' : '🔍';
+  }
+
+  async function geocodeCity() {
+    const city = document.getElementById('cityInput').value.trim();
+    if (!city) return;
+    const hint = document.getElementById('geocodeResult');
+    hint.textContent = 'Looking up…'; hint.style.color = 'var(--muted)';
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1`);
+      const d = await r.json();
+      if (!d.length) { hint.textContent = 'Not found. Try a more specific name.'; return; }
+      resolvedLat = parseFloat(d[0].lat); resolvedLng = parseFloat(d[0].lon);
+      hint.textContent = `✓ ${d[0].display_name.split(',').slice(0,3).join(',')} → ${resolvedLat.toFixed(4)}, ${resolvedLng.toFixed(4)}`;
+      hint.style.color = 'var(--success)';
+    } catch(e) { hint.textContent = 'Geocoding failed. Enter coordinates manually.'; hint.style.color='var(--danger)'; }
+  }
+
+  async function getCoordinates() {
+    if (locMode==='gps') return new Promise((res,rej) => navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lng:p.coords.longitude}),e=>rej(new Error('GPS denied. Switch to City Name mode.'))));
+    if (locMode==='city') {
+      if (resolvedLat) return {lat:resolvedLat,lng:resolvedLng};
+      const city = document.getElementById('cityInput').value.trim();
+      if (!city) throw new Error('Enter a city and click Find Coordinates.');
+      await geocodeCity();
+      if (resolvedLat) return {lat:resolvedLat,lng:resolvedLng};
+      throw new Error('Could not geocode. Try coordinates mode.');
+    }
+    const lat=parseFloat(document.getElementById('manLat').value), lng=parseFloat(document.getElementById('manLng').value);
+    if (isNaN(lat)||isNaN(lng)) throw new Error('Enter valid latitude and longitude.');
+    return {lat,lng};
+  }
+
+  function setStatus(msg,state){const b=document.getElementById('statusBar');b.style.display='flex';document.getElementById('dot').className='dot '+state;document.getElementById('statusText').textContent=msg;}
+  function showError(msg){const b=document.getElementById('errorBox');b.innerHTML='⚠ '+msg;b.style.display='block';}
+  function hideError(){document.getElementById('errorBox').style.display='none';}
+
+  function updateStats(){
+    const t=allResults.length,nw=allResults.filter(r=>!r.website).length;
+    document.getElementById('sTotal').textContent=t;
+    document.getElementById('sNoWeb').textContent=nw;
+    document.getElementById('sHasWeb').textContent=t-nw;
+    document.getElementById('sPage').textContent=currentPage;
+    document.getElementById('statsRow').style.display='grid';
+  }
+
+  function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+  function renderResults(){
+    const list=document.getElementById('bizList'),section=document.getElementById('resultsSection'),empty=document.getElementById('emptyState');
+    let data=allResults;
+    if(currentFilter==='no') data=allResults.filter(r=>!r.website);
+    if(currentFilter==='yes') data=allResults.filter(r=>!!r.website);
+    if(!allResults.length){section.style.display='none';empty.style.display='block';return;}
+    section.style.display='block';empty.style.display='none';list.innerHTML='';
+    data.forEach(b=>{
+      const noWeb=!b.website,stars=b.rating?'★'.repeat(Math.round(b.rating))+'☆'.repeat(5-Math.round(b.rating)):'';
+      const mapsLink=b.place_id?`https://www.google.com/maps/place/?q=place_id:${b.place_id}`:'#';
+      list.innerHTML+=`<div class="biz-card ${noWeb?'no-web':''}">
+        <div>
+          <div class="biz-name">${escHtml(b.title)}</div>
+          <div class="biz-meta">
+            <span class="badge ${noWeb?'nw':'hw'}">${noWeb?'No Website':'Has Website'}</span>
+            ${b.rating?`<span><span class="stars">${stars}</span> ${b.rating}${b.reviews?` (${b.reviews})`:''}  </span>`:''}
+            ${b.type?`<span>🏷 ${escHtml(b.type)}</span>`:''}
+            ${b.address?`<span>📍 ${escHtml(b.address)}</span>`:''}
+            ${b.phone?`<span>📞 ${escHtml(b.phone)}</span>`:''}
+          </div>
+        </div>
+        <div class="biz-actions">
+          <a href="${mapsLink}" target="_blank">Maps ↗</a>
+          ${b.website?`<a href="${escHtml(b.website)}" target="_blank">Site ↗</a>`:''}
+        </div>
+      </div>`;
+    });
+  }
+
+  function setFilter(f){currentFilter=f;['all','no','yes'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('active',t===f));renderResults();}
+
+  function parseResults(data){
+    return (data.local_results||[]).map(r=>({title:r.title,website:r.website||null,rating:r.rating,reviews:r.reviews,type:r.type,address:r.address,phone:r.phone,place_id:r.place_id}));
+  }
+
+  const SERPAPI_KEY = '13fd83f711f435486c8eeed548d3d06e77eba667bff3c6824e550e8a9f6085c7';
+
+  async function callApi(params) {
+    let url;
+    if (params.next) {
+      url = decodeURIComponent(params.next) + '&api_key=' + SERPAPI_KEY;
+    } else {
+      const p = new URLSearchParams({
+        engine: 'google_maps',
+        type: 'search',
+        q: params.q,
+        ll: params.ll,
+        gl: params.gl,
+        api_key: SERPAPI_KEY,
+      });
+      url = 'https://serpapi.com/search.json?' + p;
+    }
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    return data;
+  }
+
+  async function startSearch(){
+    hideError();
+    allResults=[];serpNextUrl=null;currentPage=1;
+    document.getElementById('statsRow').style.display='none';
+    document.getElementById('resultsSection').style.display='none';
+    document.getElementById('emptyState').style.display='none';
+    document.getElementById('loadMoreRow').style.display='none';
+    document.getElementById('searchBtn').disabled=true;
+    setStatus('Resolving location…','yellow');
+
+    let lat,lng;
+    try { ({lat,lng}=await getCoordinates()); }
+    catch(e){showError(e.message);setStatus('Location failed.','red');document.getElementById('searchBtn').disabled=false;return;}
+
+    const q=document.getElementById('bizType').value;
+    const zoom=document.getElementById('zoom').value;
+    const gl=document.getElementById('country').value;
+    const ll=`@${lat},${lng},${zoom}z`;
+
+    setStatus(`Searching for "${q}"…`,'yellow');
+    try {
+      const data = await callApi({q, ll, gl});
+      allResults = parseResults(data);
+      if (data.serpapi_pagination?.next) {
+        serpNextUrl = data.serpapi_pagination.next;
+        document.getElementById('loadMoreRow').style.display='block';
+      }
+      updateStats(); renderResults();
+      const nw=allResults.filter(r=>!r.website).length;
+      setStatus(`✓ ${allResults.length} businesses — ${nw} with no website`,'green');
+    } catch(e){showError(e.message);setStatus('Search failed.','red');}
+    document.getElementById('searchBtn').disabled=false;
+  }
+
+  async function loadMore(){
+    if(!serpNextUrl) return;
+    document.getElementById('loadMoreRow').style.display='none';
+    currentPage++;setStatus(`Loading page ${currentPage}…`,'yellow');
+    try {
+      const data = await callApi({next: encodeURIComponent(serpNextUrl)});
+      allResults=[...allResults,...parseResults(data)];
+      serpNextUrl=data.serpapi_pagination?.next||null;
+      if(serpNextUrl) document.getElementById('loadMoreRow').style.display='block';
+      updateStats();renderResults();
+      setStatus(`✓ ${allResults.length} total — ${allResults.filter(r=>!r.website).length} with no website`,'green');
+    } catch(e){showError(e.message);setStatus('Failed.','red');}
+  }
+
+  function exportCSV(){
+    if(!allResults.length) return;
+    const rows=[['Name','Has Website','Website','Rating','Reviews','Type','Address','Phone','Maps Link']];
+    allResults.forEach(b=>{
+      const ml=b.place_id?`https://www.google.com/maps/place/?q=place_id:${b.place_id}`:'';
+      rows.push([`"${(b.title||'').replace(/"/g,'""')}"`,b.website?'Yes':'No',b.website||'',b.rating||'',b.reviews||'',`"${(b.type||'').replace(/"/g,'""')}"`,`"${(b.address||'').replace(/"/g,'""')}"`,b.phone||'',ml]);
+    });
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'}));
+    a.download='no-website-businesses.csv';a.click();
+  }
+</script>
+</body>
+</html>
