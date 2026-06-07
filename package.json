@@ -1,1 +1,5 @@
-{"name":"website-gap-finder","version":"1.0.0"}
+{
+  "name": "website-gap-finder",
+  "version": "1.0.0",
+  "type": "module"
+}
